@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { SwipeCarousel } from '../carousel/index.js';
 
 // Отримуємо шлях до main.js
 const mainJsPath = path.resolve(__dirname, '../main.js');
@@ -12,14 +13,14 @@ vi.mock('../carousel/index.js', () => {
   const Carousel = vi.fn(function(p) {
     // Зберігаємо параметри для тестування
     const settings = {...{containerId: '#carousel', interval: 5000, isPlaying: true, slideId: '.slide', pauseOnHover: false}, ...p};
-    
+
     this.container = document.querySelector(settings.containerId);
     this.slides = this.container.querySelectorAll(settings.slideId);
     this.TIMER_INTERVAL = settings.interval;
     this.isPlaying = settings.isPlaying;
     this.pauseOnHover = settings.pauseOnHover;
   });
-  
+
   // Мокуємо прототип класу
   Carousel.prototype = {
     init: vi.fn(function() {
@@ -29,7 +30,7 @@ vi.mock('../carousel/index.js', () => {
       this._initListeners();
       this._tick();
     }),
-    
+
     _initProps: vi.fn(function() {
       this.currentSlide = 0;
       this.SLIDES_COUNT = this.slides.length;
@@ -39,7 +40,7 @@ vi.mock('../carousel/index.js', () => {
       this.FA_PAUSE = '<i class="far fa-pause-circle"></i>';
       this.FA_PLAY = '<i class="far fa-play-circle"></i>';
     }),
-    
+
     _initControls: vi.fn(function() {
       const controls = document.createElement('div');
       controls.setAttribute('id', 'controls-container');
@@ -50,11 +51,11 @@ vi.mock('../carousel/index.js', () => {
       `;
       this.container.append(controls);
     }),
-    
+
     _initIndicators: vi.fn(function() {
       const indicators = document.createElement('div');
       indicators.setAttribute('id', 'indicators-container');
-      
+
       for (let i = 0; i < this.SLIDES_COUNT; i++) {
         const indicator = document.createElement('div');
         indicator.classList.add('indicator');
@@ -62,40 +63,40 @@ vi.mock('../carousel/index.js', () => {
         if (i === 0) indicator.classList.add('active');
         indicators.append(indicator);
       }
-      
+
       this.container.append(indicators);
     }),
-    
+
     _initListeners: vi.fn(function() {
       document.addEventListener('keydown', this._pressKey.bind(this));
-      
+
       const pauseBtn = this.container.querySelector('#pause-btn');
       const nextBtn = this.container.querySelector('#next-btn');
       const prevBtn = this.container.querySelector('#prev-btn');
       const indicators = this.container.querySelector('#indicators-container');
-      
+
       pauseBtn.addEventListener('click', this.pausePlay.bind(this));
       nextBtn.addEventListener('click', this.next.bind(this));
       prevBtn.addEventListener('click', this.prev.bind(this));
       indicators.addEventListener('click', this._indicateHandler.bind(this));
-      
+
       if (this.pauseOnHover) {
         this.container.addEventListener('mouseenter', this.pause.bind(this));
         this.container.addEventListener('mouseleave', this.play.bind(this));
       }
     }),
-    
+
     _gotoNth: vi.fn(function(n) {
       const slides = this.container.querySelectorAll('.slide');
       const indicators = this.container.querySelectorAll('.indicator');
-      
+
       slides[this.currentSlide].classList.toggle('active');
       indicators[this.currentSlide].classList.toggle('active');
       this.currentSlide = (n + this.SLIDES_COUNT) % this.SLIDES_COUNT;
       slides[this.currentSlide].classList.toggle('active');
       indicators[this.currentSlide].classList.toggle('active');
     }),
-    
+
     _pressKey: vi.fn(function(e) {
       if (e.code === this.CODE_LEFT_ARROW) this.prev();
       if (e.code === this.CODE_RIGHT_ARROW) this.next();
@@ -104,7 +105,7 @@ vi.mock('../carousel/index.js', () => {
         this.pausePlay();
       }
     }),
-    
+
     _indicateHandler: vi.fn(function(e) {
       const target = e.target;
       if (target && target.classList.contains('indicator')) {
@@ -112,14 +113,14 @@ vi.mock('../carousel/index.js', () => {
         this._gotoNth(target.dataset.slideTo);
       }
     }),
-    
+
     _tick: vi.fn(function() {
       if (!this.isPlaying) return;
       this.timerID = setInterval(() => {
         this._gotoNth(this.currentSlide + 1);
       }, this.TIMER_INTERVAL);
     }),
-    
+
     pause: vi.fn(function() {
       if (!this.isPlaying) return;
       const pauseBtn = this.container.querySelector('#pause-btn');
@@ -127,7 +128,7 @@ vi.mock('../carousel/index.js', () => {
       this.isPlaying = false;
       clearInterval(this.timerID);
     }),
-    
+
     play: vi.fn(function() {
       if (this.isPlaying) return;
       const pauseBtn = this.container.querySelector('#pause-btn');
@@ -135,22 +136,22 @@ vi.mock('../carousel/index.js', () => {
       this.isPlaying = true;
       this._tick();
     }),
-    
+
     pausePlay: vi.fn(function() {
       this.isPlaying ? this.pause() : this.play();
     }),
-    
+
     next: vi.fn(function() {
       this.pause();
       this._gotoNth(this.currentSlide + 1);
     }),
-    
+
     prev: vi.fn(function() {
       this.pause();
       this._gotoNth(this.currentSlide - 1);
     })
   };
-  
+
   // Створюємо мок для SwipeCarousel
   const SwipeCarousel = vi.fn(function(options) {
     // Викликаємо конструктор базового класу
@@ -160,37 +161,37 @@ vi.mock('../carousel/index.js', () => {
     this.endPosX = null;
     this.swipeThreshold = options.swipeThreshold || 100;
   });
-  
+
   // Наслідуємо прототип від Carousel
   SwipeCarousel.prototype = Object.create(Carousel.prototype);
-  
+
   // Додаємо власні методи для свайпу
   SwipeCarousel.prototype._initListeners = vi.fn(function() {
     // Спочатку викликаємо батьківський метод
     Carousel.prototype._initListeners.call(this);
-    
+
     // Додаємо обробники для свайпів
     this.container.addEventListener('touchstart', this._swipeStart.bind(this), { passive: true });
     this.slidesContainer.addEventListener('mousedown', this._swipeStart.bind(this));
     this.container.addEventListener('touchend', this._swipeEnd.bind(this));
     this.slidesContainer.addEventListener('mouseup', this._swipeEnd.bind(this));
   });
-  
+
   SwipeCarousel.prototype._swipeStart = vi.fn(function(e) {
     this.startPosX = e instanceof MouseEvent
       ? e.clientX
       : e.changedTouches[0].clientX;
   });
-  
+
   SwipeCarousel.prototype._swipeEnd = vi.fn(function(e) {
     this.endPosX = e instanceof MouseEvent
       ? e.clientX
       : e.changedTouches[0].clientX;
-    
+
     if (this.endPosX - this.startPosX > this.swipeThreshold) this.prev();
     if (this.endPosX - this.startPosX < -this.swipeThreshold) this.next();
   });
-  
+
   // Створюємо єдиний об'єкт експорту для src/carousel/index.js
   return {
     // Експортуємо клас Carousel як іменований експорт
@@ -235,15 +236,13 @@ describe('Carousel Functionality', () => {
     vi.spyOn(window, 'clearInterval');
 
     // Імпортуємо мок-класи
-    const { default: SwipeCarousel } = require('../carousel/index.js');
-    
     // Створюємо екземпляр карусельки
     carousel = new SwipeCarousel({
       containerId: '#carousel',
       slideId: '.slide',
       interval: 2000
     });
-    
+
     // Зберігаємо необхідні властивості
     carousel.container = document.querySelector('#carousel');
     carousel.slides = carousel.container.querySelectorAll('.slide');
@@ -251,11 +250,11 @@ describe('Carousel Functionality', () => {
     carousel.isPlaying = true;
     carousel.startPosX = null;
     carousel.endPosX = null;
-    
+
     // Шпигуємо за методами next та prev
     vi.spyOn(carousel, 'next');
     vi.spyOn(carousel, 'prev');
-    
+
     // Ініціалізуємо карусель
     carousel.init();
 
@@ -308,12 +307,12 @@ describe('Carousel Functionality', () => {
     carousel._tick = vi.fn(function() {
       window.setInterval(() => {}, this.TIMER_INTERVAL);
     });
-    
+
     // Перевіряємо відтворення
     pauseBtn.click();
     expect(pauseBtn.innerHTML).toContain('pause-circle');
     expect(window.setInterval).toHaveBeenCalled();
-    
+
     // Відновлюємо оригінальний метод
     carousel._tick = originalTick;
   });
@@ -339,7 +338,7 @@ describe('Carousel Functionality', () => {
     const preventDefaultSpy = vi.spyOn(spaceEvent, 'preventDefault');
     document.dispatchEvent(spaceEvent);
     expect(preventDefaultSpy).toHaveBeenCalled();
-    
+
     // Перевіряємо, що clearInterval викликається при натисканні пробілу
     expect(window.clearInterval).toHaveBeenCalled();
   });
@@ -350,7 +349,7 @@ describe('Carousel Functionality', () => {
     expect(document.body.innerHTML).toContain('carousel');
     expect(container).toBeDefined();
     expect(container.querySelectorAll('.slide').length).toBeGreaterThan(0);
-    
+
     // Достатньо знати, що тест працює і DOM змінюється після свайпу-події
     const initialActiveSlide = document.querySelector('.slide.active');
     expect(initialActiveSlide).not.toBeNull();
@@ -359,18 +358,18 @@ describe('Carousel Functionality', () => {
   test('Свайп', () => {
     // Зберігаємо початковий стан
     const initialActiveClass = slides[0].classList.contains('active');
-    
+
     // Симулюємо свайп для переходу до наступного слайду
     container.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 300 }));
     container.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: 100 })); // Свайп вліво - наступний слайд
-    
+
     // Перевіряємо, що активний слайд змінився
     expect(slides[0].classList.contains('active')).not.toBe(initialActiveClass);
-    
+
     // Симулюємо свайп для переходу до попереднього слайду
     container.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 100 }));
     container.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: 300 })); // Свайп вправо - попередній слайд
-    
+
     // Перевіряємо, що вернулися до початкового стану
     expect(slides[0].classList.contains('active')).toBe(initialActiveClass);
   });
@@ -384,14 +383,14 @@ describe('Carousel Functionality', () => {
     // Спочатку переходимо до другого слайду
     nextBtn.click();
     expect(slides[1].classList.contains('active')).toBe(true);
-    
+
     // Потім переходимо до третього (останнього) слайду
     nextBtn.click();
     expect(slides[2].classList.contains('active')).toBe(true);
-    
+
     // Клікаємо на кнопку Далі для переходу з останнього на перший
     nextBtn.click();
-    
+
     // Перевіряємо, що відбувся перехід на перший слайд
     expect(slides[0].classList.contains('active')).toBe(true);
     expect(indicators[0].classList.contains('active')).toBe(true);
@@ -400,10 +399,10 @@ describe('Carousel Functionality', () => {
   test('Циклічний перехід назад (з першого на останній)', () => {
     // Перевіряємо, що ми на першому слайді
     expect(slides[0].classList.contains('active')).toBe(true);
-    
+
     // Клікаємо на кнопку Назад для переходу з першого на останній
     prevBtn.click();
-    
+
     // Перевіряємо, що відбувся перехід на останній слайд
     expect(slides[2].classList.contains('active')).toBe(true);
     expect(indicators[2].classList.contains('active')).toBe(true);
@@ -418,25 +417,22 @@ describe('Carousel Functionality', () => {
         <div class="custom-slide"></div>
       </div>
     `;
-    
-    // Отримуємо клас SwipeCarousel
-    const { default: SwipeCarousel } = require('../carousel/index.js');
-    
+
     // Налаштовуємо підрахунок викликів setInterval
     vi.spyOn(window, 'setInterval');
-    
+
     // Перевизначаємо методи прототипу, щоб уникнути маніпуляцій з DOM
     SwipeCarousel.prototype._initControls = vi.fn();
     SwipeCarousel.prototype._initIndicators = vi.fn();
     SwipeCarousel.prototype._initListeners = vi.fn();
-    
+
     // Використовуємо оригінальний метод _tick, але відстежуємо його виклики
     const originalTick = SwipeCarousel.prototype._tick;
     SwipeCarousel.prototype._tick = vi.fn(function() {
       if (!this.isPlaying) return;
       window.setInterval(() => {}, this.TIMER_INTERVAL);
     });
-    
+
     // Створюємо карусель з кастомними налаштуваннями
     const customCarousel = new SwipeCarousel({
       containerId: '#custom-carousel',
@@ -444,33 +440,33 @@ describe('Carousel Functionality', () => {
       interval: 1000,
       isPlaying: false
     });
-    
+
     // Перевіряємо налаштування, які були передані в конструктор
     expect(customCarousel.TIMER_INTERVAL).toBe(1000);
     expect(customCarousel.isPlaying).toBe(false);
-    
+
     // Очищаємо історію викликів перед тестом
     window.setInterval.mockClear();
-    
+
     // Перевіряємо інші методи, які використовують налаштування
     customCarousel.init();
-    
+
     // _tick викликається в init, але оскільки isPlaying=false, setInterval не повинен викликатися
     expect(window.setInterval).not.toHaveBeenCalled();
-    
+
     // Перевіряємо, що setInterval викликається тільки коли isPlaying = true
     customCarousel.isPlaying = true;
     customCarousel._tick();
     expect(window.setInterval).toHaveBeenCalled();
-    
+
     // Очищаємо DOM після тесту
     document.body.innerHTML = '';
   });
 
   test('Перехід між слайдами через індикатори має працювати з числовими індексами', () => {
-    // Оскільки прямий доступ до приватних методів неможливий, 
+    // Оскільки прямий доступ до приватних методів неможливий,
     // перевіряємо це через мок-об'єкт
-    
+
     // Створюємо мок для _gotoNth з перевіркою типу
     const mockCarousel = {
       _gotoNth: function(n) {
@@ -481,7 +477,7 @@ describe('Carousel Functionality', () => {
       },
       pause: function() {}
     };
-    
+
     // Створюємо фіктивний event з target, що має dataset.slideTo як рядок
     const fakeEvent = {
       target: {
@@ -489,8 +485,8 @@ describe('Carousel Functionality', () => {
         dataset: { slideTo: '1' } // рядок '1'
       }
     };
-    
-    // Перевіряємо, що при використанні target.dataset.slideTo без конвертації 
+
+    // Перевіряємо, що при використанні target.dataset.slideTo без конвертації
     // буде викинуто помилку
     const badHandler = function(e) {
       const target = e.target;
@@ -499,11 +495,11 @@ describe('Carousel Functionality', () => {
         this._gotoNth(target.dataset.slideTo); // без конвертації
       }
     };
-    
+
     expect(() => {
       badHandler.call(mockCarousel, fakeEvent);
     }).toThrow('Argument to _gotoNth must be a number');
-    
+
     // Перевіряємо, що при використанні правильного перетворення типів
     // помилки не буде
     const goodHandler = function(e) {
@@ -513,7 +509,7 @@ describe('Carousel Functionality', () => {
         this._gotoNth(+target.dataset.slideTo); // з конвертацією
       }
     };
-    
+
     expect(() => {
       goodHandler.call(mockCarousel, fakeEvent);
     }).not.toThrow();
@@ -537,18 +533,18 @@ describe('Carousel Functionality', () => {
   test('Обчислення індексу наступного слайду має працювати коректно при будь-якій кількості слайдів', () => {
     // Отримуємо вихідний код core.js
     const carouselCode = fs.readFileSync(path.resolve(__dirname, '../carousel/core.js'), 'utf-8');
-    
+
     // Шукаємо рядок, де відбувається обчислення наступного слайду
     const correctPattern = /this\.#currentSlide\s*=\s*\(n\s*\+\s*this\.#SLIDES_COUNT\)\s*%\s*this\.#SLIDES_COUNT/;
-    
+
     // Шукаємо неправильні патерни з конкретними числами
     const wrongPattern1 = /this\.#currentSlide\s*=\s*\(n\s*\+\s*this\.#SLIDES_COUNT\)\s*%\s*\d+/;
     const wrongPattern2 = /this\.#currentSlide\s*=\s*\(n\s*\+\s*\d+\)\s*%\s*this\.#SLIDES_COUNT/;
     const wrongPattern3 = /this\.#currentSlide\s*=\s*\(n\s*\+\s*\d+\)\s*%\s*\d+/;
-    
+
     // Перевіряємо наявність правильного патерну
     expect(correctPattern.test(carouselCode)).toBe(true);
-    
+
     // Переконуємося, що неправильні патерни відсутні
     expect(wrongPattern1.test(carouselCode)).toBe(false);
     expect(wrongPattern2.test(carouselCode)).toBe(false);
